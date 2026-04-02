@@ -48,7 +48,7 @@ def degrade_all_tensors(module, ratio, max_percent):
             buf[mask] += shifts[mask]
 
 def run_disintegration(model_id="runwayml/stable-diffusion-v1-5", 
-                       prompt="A beautiful landscape, oil painting",
+                       prompt="A high-resolution professional photograph of a majestic mountain range at sunrise, cinematic lighting, 8k",
                        num_steps=10, 
                        ratio=0.01, 
                        max_percent=0.05):
@@ -58,8 +58,15 @@ def run_disintegration(model_id="runwayml/stable-diffusion-v1-5",
     print(f"Loading model: {model_id}")
     pipe = StableDiffusionPipeline.from_pretrained(
         model_id, 
-        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32
+        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+        use_safetensors=True,
+        variant="fp16"
     )
+    
+    # Disable the Safety Checker to see raw disintegration
+    # Note: As weights degrade, the model may produce noise that triggers the safety filter.
+    pipe.safety_checker = None
+    pipe.requires_safety_checker = False
     
     if torch.cuda.is_available():
         pipe = pipe.to("cuda")
@@ -79,14 +86,13 @@ def run_disintegration(model_id="runwayml/stable-diffusion-v1-5",
         degrade_all_tensors(pipe.unet, ratio=ratio, max_percent=max_percent)
         
         # Generate image with the now-degraded U-Net
-        # Note: We keep the same prompt and seed (if we fixed it) to see the decay
         image = pipe(prompt, num_inference_steps=30).images[0]
         image.save(f"outputs/step_{i}_degraded.png")
         
     print("Disintegration complete. Check the 'outputs' folder.")
 
 def run_dynamic_disintegration(model_id="runwayml/stable-diffusion-v1-5", 
-                               prompt="A beautiful landscape, oil painting",
+                               prompt="A high-resolution professional photograph of a majestic mountain range at sunrise, cinematic lighting, 8k",
                                ratio=0.001, 
                                max_percent=0.01):
     """
@@ -96,30 +102,46 @@ def run_dynamic_disintegration(model_id="runwayml/stable-diffusion-v1-5",
     print(f"Loading model: {model_id}")
     pipe = StableDiffusionPipeline.from_pretrained(
         model_id, 
-        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32
+        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+        use_safetensors=True,
+        variant="fp16"
     )
+    
+    # Disable the Safety Checker to see raw disintegration
+    pipe.safety_checker = None
+    pipe.requires_safety_checker = False
     
     if torch.cuda.is_available():
         pipe = pipe.to("cuda")
     
     os.makedirs("outputs", exist_ok=True)
 
-    # We use the 'callback' parameter to run our code at each denoising step
-    # pipe.unet is what we want to degrade
     def callback_fn(step: int, timestep: int, latents: torch.FloatTensor):
         print(f"Step {step}: Degrading U-Net...")
-        # Since we're doing this every step, we use smaller ratio/percent
         degrade_all_tensors(pipe.unet, ratio=ratio, max_percent=max_percent)
         return latents
 
     print("Generating image with dynamic disintegration...")
-    # num_inference_steps=50 means the callback will run 50 times
     image = pipe(prompt, num_inference_steps=50, callback=callback_fn, callback_steps=1).images[0]
     image.save(f"outputs/dynamic_disintegration.png")
     print("Complete. Check outputs/dynamic_disintegration.png")
 
 if __name__ == "__main__":
-    # Example usage:
-    # run_disintegration(num_steps=5, ratio=0.01, max_percent=0.05)
-    # run_dynamic_disintegration(ratio=0.005, max_percent=0.01)
-    pass
+    print("Starting Disintegration Demo...")
+    photorealistic_prompt = "A high-resolution professional photograph of a majestic mountain range at sunrise, cinematic lighting, 8k"
+    
+    # 1. Run a longer progressive disintegration (6 steps)
+    run_disintegration(
+        prompt=photorealistic_prompt,
+        num_steps=6, 
+        ratio=0.03,
+        max_percent=0.15
+    )
+    
+    # 2. Run a dynamic disintegration on the SAME prompt for comparison
+    run_dynamic_disintegration(
+        prompt=photorealistic_prompt,
+        ratio=0.005,
+        max_percent=0.02
+    )
+    print("Demo complete. Check the 'outputs' folder for images.")

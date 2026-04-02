@@ -22,5 +22,9 @@ Based on the theory "In Defense of Disintegration" by Grayson Earle, this script
 
 ## Disintegration Methods
 
-- **Progressive:** Degrades the model between full generation runs.
-- **Dynamic:** Degrades the model at each denoising step during a single image generation.
+- **Progressive Disintegration:** Degrades the U-Net *between* full generation runs. This simulates a model losing its "memory" or training over time.
+- **Dynamic Disintegration:** Degrades the U-Net *during* the diffusion process (at every denoising step). This simulates a model "unraveling" while it is in the middle of forming a single image.
+
+## Note on the Safety Checker
+
+The Stable Diffusion `SafetyChecker` has been disabled in this script. As the model's weights disintegrate, it often produces abstract noise that the safety filter misinterprets as NSFW content, returning black squares. To see the raw aesthetic of the disintegration, the filter is bypassed.

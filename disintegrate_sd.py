@@ -27,9 +27,9 @@ def degrade_all_tensors(module, ratio, max_percent):
 
 def run_disintegration(model_id="runwayml/stable-diffusion-v1-5", 
                        prompt="A high-resolution professional photograph of a majestic mountain range at sunrise, cinematic lighting, 8k",
-                       num_steps=20, 
-                       ratio=0.005, 
-                       max_percent=0.02):
+                       num_steps=100, 
+                       ratio=0.008, 
+                       max_percent=0.03):
     print(f"Loading model: {model_id}")
     pipe = StableDiffusionPipeline.from_pretrained(
         model_id, torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
@@ -39,17 +39,17 @@ def run_disintegration(model_id="runwayml/stable-diffusion-v1-5",
     pipe.requires_safety_checker = False
     if torch.cuda.is_available(): pipe = pipe.to("cuda")
     
-    # Clear old outputs to avoid confusion
+    # Clear old outputs
     if os.path.exists("outputs"):
         shutil.rmtree("outputs")
     os.makedirs("outputs", exist_ok=True)
     
-    # Use a fixed seed so we see the SAME image disintegrate
+    # Use a fixed seed for the "motion" effect
     generator = torch.Generator("cuda" if torch.cuda.is_available() else "cpu").manual_seed(42)
 
     print("Generating base image (Step 0)...")
     image = pipe(prompt, generator=generator).images[0]
-    image.save(f"outputs/step_00_clean.png")
+    image.save(f"outputs/step_000_clean.png")
 
     for i in range(1, num_steps + 1):
         print(f"Disintegration Step {i}/{num_steps}...")
@@ -58,9 +58,9 @@ def run_disintegration(model_id="runwayml/stable-diffusion-v1-5",
         # Reset generator for consistency
         generator = torch.Generator("cuda" if torch.cuda.is_available() else "cpu").manual_seed(42)
         image = pipe(prompt, num_inference_steps=30, generator=generator).images[0]
-        image.save(f"outputs/step_{i:02d}_degraded.png")
+        image.save(f"outputs/step_{i:03d}_degraded.png")
         
-    print(f"Disintegration complete. 20 steps saved to 'outputs/'.")
+    print(f"Disintegration complete. {num_steps} steps saved to 'outputs/'.")
 
 def run_dynamic_disintegration(model_id="runwayml/stable-diffusion-v1-5", 
                                prompt="A high-resolution professional photograph of a majestic mountain range at sunrise, cinematic lighting, 8k",
@@ -78,19 +78,18 @@ def run_dynamic_disintegration(model_id="runwayml/stable-diffusion-v1-5",
     generator = torch.Generator("cuda" if torch.cuda.is_available() else "cpu").manual_seed(42)
 
     def callback_fn(step: int, timestep: int, latents: torch.FloatTensor):
-        # We degrade at a very low rate during the 50 steps
         degrade_all_tensors(pipe.unet, ratio=ratio, max_percent=max_percent)
         return latents
 
-    print("Generating image with dynamic disintegration (U-Net unravelling during creation)...")
+    print("Generating image with dynamic disintegration...")
     image = pipe(prompt, num_inference_steps=50, callback=callback_fn, callback_steps=1, generator=generator).images[0]
     image.save(f"outputs/z_dynamic_unravelling.png")
 
 if __name__ == "__main__":
     prompt = "A high-resolution professional photograph of a majestic mountain range at sunrise, cinematic lighting, 8k"
     
-    # 20 steps, low intensity for "motion"
-    run_disintegration(prompt=prompt, num_steps=20, ratio=0.008, max_percent=0.03)
+    # 100 steps at the same pace to reach total obliteration
+    run_disintegration(prompt=prompt, num_steps=100, ratio=0.008, max_percent=0.03)
     
-    # Sync prompt for comparison
+    # Final dynamic check
     run_dynamic_disintegration(prompt=prompt, ratio=0.002, max_percent=0.01)

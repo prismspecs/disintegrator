@@ -72,7 +72,7 @@ def run_batch_disintegration(configs,
                              width=512,
                              upscale=True, 
                              low_vram=True,
-                             model_id="runwayml/stable-diffusion-v1-5",
+                             model_id="stable-diffusion-v1-5/stable-diffusion-v1-5",
                              base_path="/mnt/coolrunnings/mega/projects/disintegration"):
     
     print(f"Loading model: {model_id}")

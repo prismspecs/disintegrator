@@ -34,7 +34,7 @@ def get_text_overlay(image, text, font_size=20):
 def run_dual_denoising(
     prompt1="A majestic mountain range at sunrise, cinematic lighting",
     prompt2="A futuristic cyberpunk city with neon lights, rain on pavement",
-    model_id="runwayml/stable-diffusion-v1-5",
+    model_id="stable-diffusion-v1-5/stable-diffusion-v1-5",
     num_inference_steps=50,
     output_dir="dual_denoising",
     height=512,

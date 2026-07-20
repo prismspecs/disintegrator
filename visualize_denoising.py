@@ -20,7 +20,7 @@ def latents_to_pil(latents, vae):
 
 def run_denoising_visualization(
     prompt="A high-resolution professional photograph of a majestic mountain range at sunrise, cinematic lighting, 8k",
-    model_id="runwayml/stable-diffusion-v1-5",
+    model_id="stable-diffusion-v1-5/stable-diffusion-v1-5",
     num_inference_steps=50,
     output_dir="denoising_steps",
     height=512,

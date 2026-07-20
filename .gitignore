@@ -1,6 +1,9 @@
 venv/
 outputs/
 outputs_*/
+renders_*/
+measurements_*/
+measurements_*.json
 __pycache__/
 *.pyc
 .env
@@ -8,3 +11,6 @@ __pycache__/
 *.png
 *.jpg
 *.jpeg
+
+# Large disk images / unrelated binaries
+*.img

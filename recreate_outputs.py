@@ -42,7 +42,7 @@ def run_disintegration(target="unet",
                        upscale=True, 
                        low_vram=True,
                        prompt="A high-resolution professional photograph of a majestic mountain range at sunrise, cinematic lighting, 8k",
-                       model_id="runwayml/stable-diffusion-v1-5",
+                       model_id="stable-diffusion-v1-5/stable-diffusion-v1-5",
                        output_dir="outputs_recreated_1024"):
     
     print(f"Loading model: {model_id} | Targeting: {target} | Resolution: {width}x{height} (Upscale: {upscale})")

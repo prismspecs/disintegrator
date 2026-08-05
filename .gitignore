@@ -8,5 +8,4 @@ __pycache__/
 *.png
 *.jpg
 *.jpeg
-results/
 run.log

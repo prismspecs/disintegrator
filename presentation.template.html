@@ -1,0 +1,572 @@
+<title>Modelbending: A Measured Run</title>
+
+<style>
+  :root {
+    --ground:#E9EBEC; --surface:#F6F7F8; --surface-2:#DFE3E5;
+    --ink:#12181B; --ink-2:#4A555C; --ink-3:#78848B; --rule:#CDD3D6;
+    --cool:#1183A0; --warm:#BF4A22;
+    --display: Didot, "Bodoni 72", "Hoefler Text", Georgia, serif;
+    --body: "Avenir Next", Avenir, "Segoe UI", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --measure: 68ch;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground:#0F1417; --surface:#161D21; --surface-2:#1E272C;
+      --ink:#E6EAEC; --ink-2:#A8B4BA; --ink-3:#78868D; --rule:#263136;
+      --cool:#2AA3C0; --warm:#E0703F;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#0F1417; --surface:#161D21; --surface-2:#1E272C;
+    --ink:#E6EAEC; --ink-2:#A8B4BA; --ink-3:#78868D; --rule:#263136;
+    --cool:#2AA3C0; --warm:#E0703F;
+  }
+  :root[data-theme="light"] {
+    --ground:#E9EBEC; --surface:#F6F7F8; --surface-2:#DFE3E5;
+    --ink:#12181B; --ink-2:#4A555C; --ink-3:#78848B; --rule:#CDD3D6;
+    --cool:#1183A0; --warm:#BF4A22;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin:0; background:var(--ground); color:var(--ink);
+    font-family:var(--body); font-size:17px; line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap { max-width:1180px; margin:0 auto; padding:0 28px 100px; }
+  .col { max-width:var(--measure); }
+  p { margin:0 0 1.1em; color:var(--ink-2); }
+  p strong, li strong { color:var(--ink); font-weight:600; }
+  a { color:var(--cool); }
+
+  h1,h2,h3 { font-family:var(--display); font-weight:400; text-wrap:balance; color:var(--ink); margin:0; }
+  h1 { font-size:clamp(42px,7vw,86px); line-height:0.98; letter-spacing:-0.015em; }
+  h2 { font-size:clamp(27px,3.4vw,38px); line-height:1.12; margin-bottom:.5em; }
+  h3 { font-size:20px; font-family:var(--body); font-weight:600; letter-spacing:-0.01em; margin-bottom:.35em; }
+
+  .eyebrow {
+    font-family:var(--mono); font-size:11px; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--ink-3);
+  }
+
+  /* ---------- masthead ---------- */
+  header.mast { padding:64px 0 40px; border-bottom:1px solid var(--rule); }
+  .lede { font-size:21px; line-height:1.5; color:var(--ink-2); max-width:60ch; margin-top:26px; }
+  .runbar {
+    margin-top:30px; display:flex; flex-wrap:wrap; gap:0 30px;
+    font-family:var(--mono); font-size:11.5px; color:var(--ink-3);
+  }
+  .runbar b { color:var(--ink-2); font-weight:500; }
+
+  section { padding:60px 0 0; }
+  .sec-head { display:flex; align-items:baseline; gap:16px; margin-bottom:22px; }
+  .sec-head .eyebrow { flex:none; padding-top:4px; }
+
+  /* ---------- instrument ---------- */
+  .instrument {
+    margin-top:36px; background:var(--surface); border:1px solid var(--rule);
+    display:grid; grid-template-columns:minmax(0,420px) minmax(0,1fr);
+  }
+  @media (max-width:820px){ .instrument { grid-template-columns:1fr; } }
+  .plate-live { position:relative; aspect-ratio:1; background:var(--surface-2); }
+  .plate-live img { width:100%; height:100%; display:block; object-fit:cover; }
+  .plate-tag {
+    position:absolute; left:0; bottom:0; font-family:var(--mono); font-size:11px;
+    letter-spacing:.1em; padding:7px 12px; background:var(--ink); color:var(--ground);
+  }
+  .panel { padding:26px 28px 24px; display:flex; flex-direction:column; gap:20px; }
+
+  .segmented { display:inline-flex; border:1px solid var(--rule); background:var(--ground); }
+  .segmented button {
+    font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase;
+    padding:9px 16px; background:none; border:0; color:var(--ink-3); cursor:pointer;
+  }
+  .segmented button[aria-pressed="true"] { background:var(--ink); color:var(--ground); }
+  .segmented button:focus-visible { outline:2px solid var(--cool); outline-offset:2px; }
+
+  input[type=range] { width:100%; accent-color:var(--accent,var(--cool)); }
+  .scrub-row { display:flex; align-items:center; gap:14px; }
+  .scrub-row .step-no { font-family:var(--mono); font-size:12px; color:var(--ink-2); min-width:74px; }
+
+  .readouts { display:grid; grid-template-columns:repeat(2,1fr); gap:1px; background:var(--rule); border:1px solid var(--rule); }
+  .ro { background:var(--surface); padding:12px 14px; }
+  .ro .k { font-family:var(--mono); font-size:10px; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-3); }
+  .ro .v { font-family:var(--mono); font-size:23px; font-variant-numeric:tabular-nums; color:var(--ink); margin-top:3px; }
+  .ro .v small { font-size:12px; color:var(--ink-3); }
+
+  .dialwrap { display:flex; align-items:center; gap:20px; }
+  .dial-key { font-family:var(--mono); font-size:11px; color:var(--ink-3); line-height:1.8; }
+  .dial-key i { display:inline-block; width:22px; height:0; border-top:2px solid; vertical-align:middle; margin-right:7px; }
+
+  /* ---------- figures ---------- */
+  figure { margin:0; }
+  figcaption { font-family:var(--mono); font-size:11.5px; color:var(--ink-3); margin-top:9px; line-height:1.55; }
+  .plate-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-top:12px; }
+  .plate-grid img { width:100%; display:block; background:var(--surface-2); }
+  .plate-grid .lab { font-family:var(--mono); font-size:10.5px; color:var(--ink-3); margin-top:5px; }
+  @media (max-width:900px){ .plate-grid { grid-template-columns:repeat(3,1fr); } }
+  .rowlabel {
+    font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase;
+    display:flex; align-items:center; gap:9px; margin:26px 0 2px;
+  }
+  .swatch { width:11px; height:11px; flex:none; }
+
+  /* ---------- charts ---------- */
+  .chart { margin-top:14px; background:var(--surface); border:1px solid var(--rule); padding:18px 18px 10px; }
+  .chart h3 { margin-bottom:2px; }
+  .chart .sub { font-size:13.5px; color:var(--ink-3); margin-bottom:8px; }
+  .legend { display:flex; gap:18px; font-family:var(--mono); font-size:11px; color:var(--ink-2); margin-bottom:6px; flex-wrap:wrap; }
+  .legend span { display:flex; align-items:center; gap:7px; }
+  .legend i { width:18px; height:0; border-top:2px solid; }
+  svg.plot { width:100%; height:auto; aspect-ratio:720/300; display:block; overflow:visible; }
+  svg.plot .grid { stroke:var(--rule); stroke-width:1; }
+  svg.plot .axis { stroke:var(--ink-3); stroke-width:1; }
+  svg.plot text { font-family:var(--mono); font-size:10px; fill:var(--ink-3); }
+  .tip {
+    position:fixed; pointer-events:none; z-index:60; background:var(--ink); color:var(--ground);
+    font-family:var(--mono); font-size:11px; padding:8px 10px; line-height:1.6; opacity:0;
+    transition:opacity .1s; white-space:nowrap;
+  }
+
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  @media (max-width:900px){ .grid2 { grid-template-columns:1fr; } }
+
+  /* ---------- prose bits ---------- */
+  .terms { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--rule); border:1px solid var(--rule); margin:26px 0; }
+  .terms > div { background:var(--surface); padding:20px 20px 22px; }
+  .terms .t { font-family:var(--display); font-size:25px; }
+  .terms .r { font-family:var(--mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3); margin-bottom:9px; }
+  .terms p { font-size:14.5px; margin:0; line-height:1.55; }
+  @media (max-width:820px){ .terms { grid-template-columns:1fr; } }
+
+  pre {
+    background:var(--surface); border:1px solid var(--rule); padding:18px 20px; overflow-x:auto;
+    font-family:var(--mono); font-size:13px; line-height:1.62; color:var(--ink-2); margin:16px 0;
+  }
+  pre b { color:var(--ink); font-weight:600; }
+  code { font-family:var(--mono); font-size:.9em; background:var(--surface-2); padding:1px 5px; }
+  pre code { background:none; padding:0; font-size:inherit; }
+
+  table.data { border-collapse:collapse; width:100%; font-family:var(--mono); font-size:12px; font-variant-numeric:tabular-nums; }
+  table.data th, table.data td { text-align:right; padding:5px 10px; border-bottom:1px solid var(--rule); }
+  table.data th:first-child, table.data td:first-child { text-align:left; }
+  table.data th { color:var(--ink-3); font-weight:500; letter-spacing:.06em; text-transform:uppercase; font-size:10px; }
+  details { margin-top:18px; border-top:1px solid var(--rule); padding-top:12px; }
+  summary { cursor:pointer; font-family:var(--mono); font-size:11.5px; color:var(--ink-3); letter-spacing:.06em; }
+  .scroller { overflow-x:auto; }
+
+  .finding { border-left:2px solid var(--warm); padding:2px 0 2px 20px; margin:26px 0; }
+  .finding .h { font-family:var(--body); font-weight:600; color:var(--ink); margin-bottom:6px; font-size:17px; }
+  .caveat { border-left:2px solid var(--rule); padding:2px 0 2px 20px; margin:26px 0; font-size:15px; }
+
+  ul.tight { padding-left:20px; color:var(--ink-2); }
+  ul.tight li { margin-bottom:.5em; }
+  @media (prefers-reduced-motion: reduce) { * { transition:none !important; animation:none !important; } }
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <div class="eyebrow">Disintegration &nbsp;/&nbsp; instrument log</div>
+  <h1>Losing the<br>Bearings</h1>
+  <p class="lede">A measured run of <em>modelbending</em> — deliberately perturbing the weights of a
+  diffusion model so that it keeps every one of its parts and loses the ability to point them
+  anywhere. Twenty passes, two perturbation shapes, one prompt held fixed.</p>
+  <div class="runbar" id="runbar"></div>
+</header>
+
+<section id="what">
+  <div class="sec-head"><span class="eyebrow">01</span><h2>What is being done to the model</h2></div>
+  <div class="col">
+    <p>Each pass selects a random <strong>1%</strong> of the U-Net's values and nudges each selected one
+    by a random amount up to <strong>5%</strong> of that tensor's own range. Nothing is removed, nothing is
+    switched off. Then the same prompt is rendered again from the same seed, so every difference you
+    see downstream comes from the weights and nothing else.</p>
+  </div>
+
+  <pre><code>def <b>modelbend</b>(module, ratio, max_percent, dist="uniform", generator=None):
+    for _, param in module.named_parameters():
+        t_range = (param.max() - param.min()).item()
+        delta   = max_percent * t_range
+        mask    = torch.rand(param.shape, generator=generator) &lt; ratio
+        shifts  = <b>draw(dist)</b>                  # uniform(-delta, delta)  or  N(0, delta/&radic;3)
+        param[mask] += shifts[mask]</code></pre>
+
+  <div class="col">
+    <p>Three words are doing three different jobs here, and keeping them apart is what makes the
+    rest of this legible.</p>
+  </div>
+
+  <div class="terms">
+    <div><div class="r">the act</div><div class="t">Modelbending</div>
+      <p>Perturbing a trained network's weights so it produces what it was not built for. One word,
+      compounding like <em>databending</em>, which is itself named after circuit bending.</p></div>
+    <div><div class="r">the effect</div><div class="t">Model disorientation</div>
+      <p>The resulting state. The model still runs completely — every parameter present, every step
+      executed — but the values no longer encode which direction leads toward a coherent image.
+      Nothing is missing; nothing points anywhere.</p></div>
+    <div><div class="r">the frame</div><div class="t">Disintegration</div>
+      <p>What the viewer undergoes across the sequence. Kept for the aesthetic register and the
+      Basinski inheritance, never for the technique itself.</p></div>
+  </div>
+
+  <div class="caveat col">
+    <strong>Why not &ldquo;decay&rdquo;.</strong> Every word in the decay family — disintegration, degradation,
+    corruption, damage — implies loss of integrity: the thing wears away and becomes less than it was.
+    But the parameter count never changes and the magnitudes stay comparable. What is destroyed is
+    alignment. A term on the loss axis quietly files this intervention next to the hallucination it is
+    meant to be distinguished from.
+  </div>
+</section>
+
+<section id="scrub">
+  <div class="sec-head"><span class="eyebrow">02</span><h2>The run, one pass at a time</h2></div>
+  <div class="col"><p>Drag through the twenty passes. The image, the two rotation needles and the
+  readouts all move together; the distribution toggle swaps between the two runs, which share a bend
+  seed, an image seed and a dose.</p></div>
+
+  <div class="instrument">
+    <div class="plate-live">
+      <img id="liveimg" alt="Rendered output at the selected bending pass">
+      <div class="plate-tag" id="livetag">PASS 00</div>
+    </div>
+    <div class="panel">
+      <div class="segmented" role="group" aria-label="Perturbation shape">
+        <button id="b-uniform" aria-pressed="true">Uniform</button>
+        <button id="b-gaussian" aria-pressed="false">Gaussian</button>
+      </div>
+
+      <div class="scrub-row">
+        <input type="range" id="scrub" min="0" max="20" value="0" step="1" aria-label="Bending pass">
+        <span class="step-no" id="stepno">pass 0 / 20</span>
+      </div>
+
+      <div class="dialwrap">
+        <svg id="dial" width="150" height="150" viewBox="0 0 150 150" role="img"
+             aria-label="Dial comparing weight-space rotation with the disorientation angle"></svg>
+        <div class="dial-key">
+          <div><i style="border-color:var(--ink-2)"></i>weight-space <span id="k-wt">0.0&deg;</span></div>
+          <div><i style="border-color:var(--accent,var(--cool));border-top-style:dashed"></i>denoising direction <span id="k-th">0.0&deg;</span></div>
+          <div style="color:var(--ink-3);margin-top:6px">scale 0&ndash;90&deg;</div>
+        </div>
+      </div>
+
+      <div class="readouts">
+        <div class="ro"><div class="k">Disorientation angle &theta;</div><div class="v" id="ro-theta">0.00<small>&deg;</small></div></div>
+        <div class="ro"><div class="k">Weight cosine</div><div class="v" id="ro-cos">1.00000</div></div>
+        <div class="ro"><div class="k">Relative drift</div><div class="v" id="ro-drift">0.0<small>%</small></div></div>
+        <div class="ro"><div class="k">Weights touched</div><div class="v" id="ro-cov">0.0<small>%</small></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="dose">
+  <div class="sec-head"><span class="eyebrow">03</span><h2>The dose is not what the parameter says</h2></div>
+  <div class="col">
+    <p>Two arithmetic facts govern how this accumulates, and both are easy to get wrong from the
+    parameter names alone.</p>
+    <p><strong>Coverage compounds.</strong> A ratio of 1% does not mean 1% of the model. Each pass draws a
+    fresh mask, so after <em>N</em> passes the fraction touched at least once is
+    <code>1 − (1 − ratio)^N</code> — <strong>18.2%</strong> by pass 20, not 1%.</p>
+    <p><strong>Drift is a random walk.</strong> Each pass adds a fresh zero-mean shift that partly cancels
+    what came before, so displacement grows with <strong>&radic;N</strong>, not N. Doubling the passes buys
+    1.41&times; the drift. The run bears this out exactly: relative drift went 12.78% → 18.07% between
+    passes one and two, a ratio of 1.41.</p>
+  </div>
+</section>
+
+<section id="angle">
+  <div class="sec-head"><span class="eyebrow">04</span><h2>The compass is not a metaphor</h2></div>
+  <div class="col">
+    <p>At every denoising step the U-Net takes the current noisy latent and returns
+    <code>&epsilon;&#770;</code>, its prediction of the noise present. The sampler subtracts some of it.
+    That prediction is a <strong>vector in the same space as the latent</strong> — 4&times;64&times;64 = 16,384
+    numbers — and it means: <em>the junk is that way; move the other way.</em> The model's output
+    literally is a direction, and denoising is repeated movement along it.</p>
+    <p>So the angle between the bent model's prediction and the pristine model's, on identical inputs,
+    is a measurable quantity. That is the <strong>disorientation angle &theta;</strong>. Zero means the bent
+    model points exactly where the intact one does. <strong>Ninety degrees means its direction carries no
+    information at all</strong> about the correct one — and because two random vectors in 16,384 dimensions
+    are almost exactly orthogonal, 90&deg; is the noise floor rather than the midpoint of the scale.</p>
+  </div>
+
+  <div class="chart">
+    <h3>Two rotations, same units</h3>
+    <div class="sub">Weight-space rotation is <code>arccos</code> of the global cosine against the pristine weights. Both in degrees, both against the same run.</div>
+    <div class="legend" id="leg-rot"></div>
+    <svg class="plot" id="plot-rot" viewBox="0 0 720 300" preserveAspectRatio="none"></svg>
+  </div>
+
+  <div class="finding col">
+    <div class="h">The run inverted the prediction.</div>
+    <p style="margin:0">Before measuring, the working assumption in the notes was that weight-space
+    metrics would saturate uselessly near 1.0 while &theta; swung across a wide range. The opposite
+    happened. The weights rotate substantially — the global cosine falls to <span id="f-cos">—</span>,
+    about <span id="f-wt">—</span> of rotation — while the denoising direction turns only
+    <span id="f-th">—</span>. The network absorbs an enormous amount of weight displacement into a
+    small change of heading.</p>
+  </div>
+
+  <div class="col">
+    <p>Which raises the obvious question: if the heading only shifts by a few degrees, why is the
+    output unrecognizable? Because &theta; is a <em>per-step</em> error, and the sampler compounds it
+    across twenty-five sequential denoising steps, each one starting from where the last one landed.
+    This is dead reckoning. A few degrees off, held for a long enough run, and you make landfall on a
+    different continent.</p>
+  </div>
+</section>
+
+<section id="compare">
+  <div class="sec-head"><span class="eyebrow">05</span><h2>Uniform against Gaussian</h2></div>
+  <div class="col">
+    <p>The two runs are matched on everything that could otherwise explain a difference: same bend
+    seed, same image seed, same ratio, same magnitude, same prompt. Only the <em>shape</em> of the
+    perturbation changes, and the two shapes are matched in variance — the Gaussian uses
+    &sigma;&nbsp;=&nbsp;&delta;/&radic;3 — so what differs is the distribution of damage, not its total.</p>
+    <p><strong>Uniform is democratic; Gaussian is aristocratic.</strong> Under uniform, a shift of 0.9&delta;
+    is exactly as likely as one of 0.1&delta;, and nothing ever exceeds &delta;. The Gaussian tail is
+    unbounded: most shifts are smaller, and a few are far larger than uniform permits. Measured on a
+    test tensor, uniform's largest shift landed at exactly 1.00&delta; while the Gaussian's reached
+    2.2&delta;; at U-Net scale, roughly 43 million draws per pass, the expected extreme is about
+    3.4&delta;.</p>
+  </div>
+
+  <div id="plates"></div>
+
+  <div class="grid2" style="margin-top:34px">
+    <div class="chart">
+      <h3>Structure</h3>
+      <div class="sub">Share of spectral energy above half-Nyquist. Edges and texture live here; it falls as the image goes smooth.</div>
+      <div class="legend" id="leg-hf"></div>
+      <svg class="plot" id="plot-hf" viewBox="0 0 720 300" preserveAspectRatio="none"></svg>
+    </div>
+    <div class="chart">
+      <h3>Compressibility</h3>
+      <div class="sub">JPEG bytes at fixed quality — a free proxy for how much structure is left to encode.</div>
+      <div class="legend" id="leg-sz"></div>
+      <svg class="plot" id="plot-sz" viewBox="0 0 720 300" preserveAspectRatio="none"></svg>
+    </div>
+  </div>
+
+  <div class="col" style="margin-top:8px">
+    <p>There is a satisfying loop in that second chart: an argument about compression imposing
+    ideology, measuring its own outputs by how well they compress. As structure dissolves into smooth
+    fields, the file gets smaller — the image becomes cheaper to store precisely as it becomes harder
+    to recognise.</p>
+  </div>
+
+  <div id="verdict" class="finding col"></div>
+
+  <details>
+    <summary>Full measurement table</summary>
+    <div class="scroller" id="tablewrap"></div>
+  </details>
+</section>
+
+<section id="repro">
+  <div class="sec-head"><span class="eyebrow">06</span><h2>Reproducing this</h2></div>
+  <div class="col"><p>Everything above came off one MacBook — an M2 with 16&nbsp;GB, running Stable
+  Diffusion 1.5 in fp16 on MPS at roughly 50 seconds per rendered pass. The bend RNG is seeded
+  separately from the diffusion RNG, which is what lets the image seed stay fixed while the bending
+  varies.</p></div>
+  <pre><code>python experiment.py --steps 20 --ratio 0.01 --percent 0.05 \
+                     --dists uniform,gaussian --seed 42 --bend_seed 7
+
+<span style="color:var(--ink-3)"># or through the CLI, one shape at a time</span>
+python disintegrate_sd.py --target unet --steps 20 --dist gaussian --bend_seed 7</code></pre>
+  <div class="col">
+    <p style="color:var(--ink-3);font-size:14px">Repository: <code>prismspecs/disintegrator</code>.
+    Bending lives in <code>bending.py</code>; the measured harness is <code>experiment.py</code>.
+    Notes on terminology and measurement are kept alongside the paper in the research vault.</p>
+  </div>
+</section>
+
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+const DATA = __ASSETS__;
+
+const col = d => `var(${d==='uniform'?'--cool':'--warm'})`;
+const deg = c => Math.acos(Math.max(-1,Math.min(1,c)))*180/Math.PI;
+let cur = 'uniform';
+
+/* ---------- masthead run bar ---------- */
+{
+  const m = DATA.meta, n = DATA.dists.uniform.rows.length - 1;
+  document.getElementById('runbar').innerHTML = [
+    ['model', 'Stable Diffusion 1.5'], ['device', `${m.device} · ${m.dtype.replace('torch.','')}`],
+    ['passes', n], ['ratio', m.ratio], ['magnitude', m.percent],
+    ['image seed', m.seed], ['bend seed', m.bend_seed], ['inference steps', m.inference_steps]
+  ].map(([k,v])=>`<div>${k} <b>${v}</b></div>`).join('');
+}
+
+/* ---------- scrubber ---------- */
+const $ = id => document.getElementById(id);
+function paint() {
+  const d = DATA.dists[cur], i = +$('scrub').value, r = d.rows[i];
+  $('liveimg').src = d.frames[i];
+  $('livetag').textContent = `PASS ${String(i).padStart(2,'0')} · ${cur.toUpperCase()}`;
+  $('stepno').textContent = `pass ${i} / ${d.rows.length-1}`;
+  $('ro-theta').innerHTML = r.theta_deg.toFixed(2)+'<small>°</small>';
+  $('ro-cos').textContent = r.cos_w.toFixed(5);
+  $('ro-drift').innerHTML = (r.rel_drift*100).toFixed(1)+'<small>%</small>';
+  $('ro-cov').innerHTML = (r.coverage*100).toFixed(1)+'<small>%</small>';
+  document.documentElement.style.setProperty('--accent', cur==='uniform'?'var(--cool)':'var(--warm)');
+  drawDial(deg(r.cos_w), r.theta_deg);
+}
+$('scrub').addEventListener('input', paint);
+for (const d of ['uniform','gaussian']) {
+  $('b-'+d).addEventListener('click', () => {
+    cur = d;
+    $('b-uniform').setAttribute('aria-pressed', String(d==='uniform'));
+    $('b-gaussian').setAttribute('aria-pressed', String(d==='gaussian'));
+    paint();
+  });
+}
+
+/* ---------- dial ---------- */
+function drawDial(wt, th) {
+  const cx=75, cy=78, R=58;
+  // the gauge spans a half circle: 0° at the left, 45° at the top, 90° at the right
+  const ang = v => 2*v - 90;
+  const pt = (a,r) => { const t=(-90+a)*Math.PI/180; return [cx+r*Math.cos(t), cy+r*Math.sin(t)]; };
+  let s = `<path d="M ${cx-R} ${cy} A ${R} ${R} 0 0 1 ${cx+R} ${cy}" fill="none"
+           stroke="var(--rule)" stroke-width="1"/>`;
+  for (let v=0; v<=90; v+=15) {
+    const [x1,y1]=pt(ang(v),R), [x2,y2]=pt(ang(v),R-(v%45?5:9));
+    s += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--ink-3)" stroke-width="1"/>`;
+  }
+  s += `<text x="${cx-R-2}" y="${cy+14}" text-anchor="middle">0°</text>`;
+  s += `<text x="${cx}" y="${cy-R-8}" text-anchor="middle">45°</text>`;
+  s += `<text x="${cx+R+2}" y="${cy+14}" text-anchor="middle">90°</text>`;
+  const nw = pt(ang(wt), R-14), nt = pt(ang(th), R-24);
+  s += `<line x1="${cx}" y1="${cy}" x2="${nw[0]}" y2="${nw[1]}" stroke="var(--ink-2)" stroke-width="2.5"/>`;
+  s += `<line x1="${cx}" y1="${cy}" x2="${nt[0]}" y2="${nt[1]}" stroke="${col(cur)}"
+        stroke-width="2.5" stroke-dasharray="4 3"/>`;
+  s += `<circle cx="${cx}" cy="${cy}" r="3.5" fill="var(--ink)"/>`;
+  $('dial').innerHTML = s;
+  $('k-wt').textContent = wt.toFixed(1)+'°';
+  $('k-th').textContent = th.toFixed(1)+'°';
+}
+
+/* ---------- line charts ---------- */
+const tip = $('tip');
+function plot(svgId, legId, series, fmt, unit) {
+  const svg = $(svgId), W=720, H=300, m={t:12,r:14,b:30,l:52};
+  const xs = series[0].pts.map(p=>p[0]);
+  const ymax = Math.max(...series.flatMap(s=>s.pts.map(p=>p[1])))*1.08;
+  const X = v => m.l + (v-xs[0])/(xs[xs.length-1]-xs[0])*(W-m.l-m.r);
+  const Y = v => H-m.b - v/ymax*(H-m.t-m.b);
+  let s='';
+  for (let i=0;i<=4;i++){ const v=ymax*i/4, y=Y(v);
+    s+=`<line class="grid" x1="${m.l}" y1="${y}" x2="${W-m.r}" y2="${y}"/>`;
+    s+=`<text x="${m.l-8}" y="${y+3.5}" text-anchor="end">${fmt(v)}</text>`; }
+  s+=`<line class="axis" x1="${m.l}" y1="${H-m.b}" x2="${W-m.r}" y2="${H-m.b}"/>`;
+  for (const v of [0,5,10,15,20]) s+=`<text x="${X(v)}" y="${H-m.b+16}" text-anchor="middle">${v}</text>`;
+  s+=`<text x="${(W)/2}" y="${H-2}" text-anchor="middle" style="letter-spacing:.1em">BENDING PASS</text>`;
+  for (const se of series) {
+    const d = se.pts.map((p,i)=>(i?'L':'M')+X(p[0])+' '+Y(p[1])).join(' ');
+    s+=`<path d="${d}" fill="none" stroke="${se.color}" stroke-width="2"
+         stroke-dasharray="${se.dash||''}" stroke-linejoin="round"/>`;
+  }
+  s+=`<g id="${svgId}-hov"></g>`;
+  svg.innerHTML = s;
+  $(legId).innerHTML = series.map(se=>
+    `<span><i style="border-color:${se.color};${se.dash?'border-top-style:dashed':''}"></i>${se.name}</span>`).join('');
+
+  svg.addEventListener('pointermove', e => {
+    const b = svg.getBoundingClientRect();
+    const px = (e.clientX-b.left)/b.width*W;
+    const i = Math.max(0, Math.min(xs.length-1, Math.round((px-m.l)/(W-m.l-m.r)*(xs.length-1))));
+    let g = `<line class="axis" x1="${X(xs[i])}" y1="${m.t}" x2="${X(xs[i])}" y2="${H-m.b}"
+             stroke-dasharray="3 3"/>`;
+    for (const se of series) g += `<circle cx="${X(xs[i])}" cy="${Y(se.pts[i][1])}" r="5"
+      fill="${se.color}" stroke="var(--surface)" stroke-width="2"/>`;
+    $(svgId+'-hov').innerHTML = g;
+    tip.innerHTML = `pass ${xs[i]}<br>` + series.map(se =>
+      `${se.name}: ${fmt(se.pts[i][1])}${unit||''}`).join('<br>');
+    tip.style.opacity=1; tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY+14)+'px';
+  });
+  svg.addEventListener('pointerleave', ()=>{ tip.style.opacity=0; $(svgId+'-hov').innerHTML=''; });
+}
+
+const rows = d => DATA.dists[d].rows;
+const pts = (d,f) => rows(d).map(r=>[r.step, f(r)]);
+
+plot('plot-rot','leg-rot',[
+  {name:'uniform · weights',  color:'var(--cool)', pts:pts('uniform', r=>deg(r.cos_w))},
+  {name:'gaussian · weights', color:'var(--warm)', pts:pts('gaussian',r=>deg(r.cos_w))},
+  {name:'uniform · θ',        color:'var(--cool)', dash:'5 4', pts:pts('uniform', r=>r.theta_deg)},
+  {name:'gaussian · θ',       color:'var(--warm)', dash:'5 4', pts:pts('gaussian',r=>r.theta_deg)},
+], v=>v.toFixed(0)+'°');
+
+plot('plot-hf','leg-hf',[
+  {name:'uniform',  color:'var(--cool)', pts:pts('uniform', r=>r.hf_energy*1000)},
+  {name:'gaussian', color:'var(--warm)', pts:pts('gaussian',r=>r.hf_energy*1000)},
+], v=>v.toFixed(2), ' ×10⁻³');
+
+plot('plot-sz','leg-sz',[
+  {name:'uniform',  color:'var(--cool)', pts:pts('uniform', r=>r.jpg_bytes/1024)},
+  {name:'gaussian', color:'var(--warm)', pts:pts('gaussian',r=>r.jpg_bytes/1024)},
+], v=>v.toFixed(0), ' KB');
+
+/* ---------- plate rows ---------- */
+{
+  let h='';
+  for (const d of ['uniform','gaussian']) {
+    h += `<div class="rowlabel"><span class="swatch" style="background:${col(d)}"></span>${d}</div>
+          <div class="plate-grid">`;
+    for (const st of DATA.plateSteps) {
+      const r = rows(d)[st];
+      h += `<figure><img src="${DATA.dists[d].plates[st]}" alt="${d} output after ${st} passes">
+            <div class="lab">pass ${String(st).padStart(2,'0')} &middot; θ ${r.theta_deg.toFixed(1)}°</div></figure>`;
+    }
+    h += `</div>`;
+  }
+  $('plates').innerHTML = h + `<figcaption style="margin-top:14px">Matched passes, matched seeds.
+    Pass 00 is the same render in both rows — the pristine model before any bending.</figcaption>`;
+}
+
+/* ---------- findings that depend on measured values ---------- */
+{
+  const u = rows('uniform'), g = rows('gaussian'), last = u.length-1;
+  $('f-cos').textContent = u[last].cos_w.toFixed(3);
+  $('f-wt').textContent  = deg(u[last].cos_w).toFixed(0)+'°';
+  $('f-th').textContent  = u[last].theta_deg.toFixed(1)+'°';
+
+  const dth = ((g[last].theta_deg/u[last].theta_deg)-1)*100;
+  const rhf = g[last].hf_energy/Math.max(u[last].hf_energy,1e-12);
+  const rsz = g[last].jpg_bytes/u[last].jpg_bytes;
+  $('verdict').innerHTML = `<div class="h">Shape changes the texture, not the amount.</div>
+    <p>By every measure of <em>how far</em> the model has moved, the two runs are twins. Relative drift
+    ends at ${(u[last].rel_drift*100).toFixed(1)}% against ${(g[last].rel_drift*100).toFixed(1)}%;
+    weight-space rotation at ${deg(u[last].cos_w).toFixed(1)}° against ${deg(g[last].cos_w).toFixed(1)}°;
+    heading at θ ${u[last].theta_deg.toFixed(2)}° against ${g[last].theta_deg.toFixed(2)}°, a difference
+    of ${dth>=0?'+':''}${dth.toFixed(0)}%. That is the variance matching working exactly as designed.</p>
+    <p style="margin:0">By every measure of <em>what kind</em> of failure it is, they diverge. The
+    Gaussian endpoint holds <strong>${rhf.toFixed(1)}×</strong> the high-frequency energy and takes
+    <strong>${rsz.toFixed(1)}×</strong> the bytes to store — ${Math.round(g[last].jpg_bytes/1024)} KB
+    against ${Math.round(u[last].jpg_bytes/1024)} KB. You can see it in the plates: uniform dissolves
+    into a smooth field, while the Gaussian tail leaves a fine reticulated grain behind, the trace of
+    individual weights thrown far enough to survive as visible structure. The tail is an aesthetic
+    control, and it was never a documented one.</p>`;
+}
+
+/* ---------- data table ---------- */
+{
+  const u = rows('uniform'), g = rows('gaussian');
+  let h = `<table class="data"><thead><tr><th>Pass</th><th>Coverage</th>
+    <th>Drift ·U</th><th>θ ·U</th><th>cos ·U</th><th>Drift ·G</th><th>θ ·G</th><th>cos ·G</th>
+    </tr></thead><tbody>`;
+  u.forEach((r,i)=>{ h += `<tr><td>${r.step}</td><td>${(r.coverage*100).toFixed(1)}%</td>
+    <td>${(r.rel_drift*100).toFixed(1)}%</td><td>${r.theta_deg.toFixed(2)}°</td><td>${r.cos_w.toFixed(4)}</td>
+    <td>${(g[i].rel_drift*100).toFixed(1)}%</td><td>${g[i].theta_deg.toFixed(2)}°</td>
+    <td>${g[i].cos_w.toFixed(4)}</td></tr>`; });
+  $('tablewrap').innerHTML = h + `</tbody></table>`;
+}
+
+paint();
+</script>

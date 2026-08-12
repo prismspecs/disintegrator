@@ -4,39 +4,17 @@ import os
 import shutil
 from PIL import Image
 
-def degrade_all_tensors(module, ratio, max_percent):
-    device = next(module.parameters()).device
-    if device.type == 'meta': return
-
-    for name, param in module.named_parameters():
-        with torch.no_grad():
-            p_min, p_max = param.data.min(), param.data.max()
-            p_range = p_max - p_min
-            if p_range <= 1e-12: continue
-            mask = (torch.rand(param.shape, device=param.device) < ratio)
-            delta = max_percent * p_range
-            shifts = torch.empty(param.shape, device=param.device).uniform_(-delta, delta)
-            param.data[mask] += shifts[mask]
-
-    for name, buf in module.named_buffers():
-        if not torch.is_floating_point(buf): continue
-        with torch.no_grad():
-            b_min, b_max = buf.min(), buf.max()
-            b_range = b_max - b_min
-            if b_range <= 1e-12: continue
-            mask = (torch.rand(buf.shape, device=buf.device) < ratio)
-            delta = max_percent * b_range
-            shifts = torch.empty(buf.shape, device=buf.device).uniform_(-delta, delta)
-            buf[mask] += shifts[mask]
+from bending import modelbend
 
 def upscale_image(image, scale=2):
     w, h = image.size
     return image.resize((w * scale, h * scale), resample=Image.LANCZOS)
 
-def run_disintegration(target="unet", 
-                       num_steps=100, 
-                       ratio=0.01, 
+def run_disintegration(target="unet",
+                       num_steps=100,
+                       ratio=0.01,
                        max_percent=0.05,
+                       dist="uniform",
                        height=512, 
                        width=512,
                        upscale=True, 
@@ -74,8 +52,8 @@ def run_disintegration(target="unet",
 
     for i in range(1, num_steps + 1):
         print(f"[{target}] Disintegration Step {i}/{num_steps}...")
-        if target in ["unet", "both"]: degrade_all_tensors(pipe.unet, ratio=ratio, max_percent=max_percent)
-        if target in ["text_encoder", "both"]: degrade_all_tensors(pipe.text_encoder, ratio=ratio, max_percent=max_percent)
+        if target in ["unet", "both"]: modelbend(pipe.unet, ratio=ratio, max_percent=max_percent, dist=dist)
+        if target in ["text_encoder", "both"]: modelbend(pipe.text_encoder, ratio=ratio, max_percent=max_percent, dist=dist)
         
         if torch.cuda.is_available(): torch.cuda.empty_cache()
             

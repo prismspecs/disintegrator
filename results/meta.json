@@ -1,0 +1,18 @@
+{
+ "steps": 20,
+ "ratio": 0.01,
+ "percent": 0.05,
+ "inference_steps": 25,
+ "size": 512,
+ "seed": 42,
+ "bend_seed": 7,
+ "dists": "uniform,gaussian",
+ "out": "results",
+ "fp32": false,
+ "smoke": false,
+ "device": "mps",
+ "dtype": "torch.float16",
+ "prompt": "A high-resolution professional photograph of a majestic mountain range at sunrise, cinematic lighting, 8k",
+ "model": "stable-diffusion-v1-5/stable-diffusion-v1-5",
+ "torch": "2.13.0"
+}

@@ -14,3 +14,4 @@ __pycache__/
 
 # Large disk images / unrelated binaries
 *.img
+run.log

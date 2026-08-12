@@ -8,30 +8,7 @@ import argparse
 import textwrap
 from datetime import datetime
 
-def degrade_all_tensors(module, ratio, max_percent):
-    """
-    Programmatically degrades a PyTorch module's weights and buffers.
-    """
-    for name, param in module.named_parameters():
-        with torch.no_grad():
-            p_min, p_max = param.data.min(), param.data.max()
-            p_range = p_max - p_min
-            if p_range <= 1e-12: continue
-            mask = (torch.rand(param.shape, device=param.device) < ratio)
-            delta = max_percent * p_range
-            shifts = torch.empty(param.shape, device=param.device).uniform_(-delta, delta)
-            param.data[mask] += shifts[mask]
-
-    for name, buf in module.named_buffers():
-        if not torch.is_floating_point(buf): continue
-        with torch.no_grad():
-            b_min, b_max = buf.min(), buf.max()
-            b_range = b_max - b_min
-            if b_range <= 1e-12: continue
-            mask = (torch.rand(buf.shape, device=buf.device) < ratio)
-            delta = max_percent * b_range
-            shifts = torch.empty(buf.shape, device=buf.device).uniform_(-delta, delta)
-            buf[mask] += shifts[mask]
+from bending import DISTRIBUTIONS, make_generator, modelbend
 
 def precompute_semantic_anchors(pipe, device):
     """
@@ -157,7 +134,10 @@ def run_disintegration(target="unet",
                        model_id="stable-diffusion-v1-5/stable-diffusion-v1-5",
                        font_path="/usr/share/fonts/adwaita-mono-fonts/AdwaitaMono-Bold.ttf",
                        show_drift=None,
-                       inference_steps=25):
+                       inference_steps=25,
+                       dist="uniform",
+                       seed=42,
+                       bend_seed=None):
 
     # Auto-determine if we should show semantic drift
     if show_drift is None:
@@ -185,10 +165,17 @@ def run_disintegration(target="unet",
         anchors, valid_tokens = precompute_semantic_anchors(pipe, pipe.device)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_dir = f"outputs_{target}_{timestamp}"
+    output_dir = f"outputs_{target}_{dist}_{timestamp}"
     os.makedirs(output_dir, exist_ok=True)
 
-    generator = torch.Generator(pipe.device).manual_seed(42)
+    # Separate RNG streams: holding the image seed fixed while varying the bend
+    # seed is what isolates the effect of bending from a different starting latent.
+    bend_gen = make_generator(bend_seed, pipe.device) if bend_seed is not None else None
+    if bend_gen is None:
+        print("Note: bend RNG is unseeded, so this run is not reproducible (--bend_seed).")
+    print(f"Bending with {dist} shifts | ratio={ratio} | max_percent={max_percent}")
+
+    generator = torch.Generator(pipe.device).manual_seed(seed)
 
     print(f"Step 0: Generating clean base...")
     image = pipe(prompt, height=height, width=width, num_inference_steps=inference_steps, generator=generator).images[0]
@@ -201,15 +188,17 @@ def run_disintegration(target="unet",
 
     for i in range(1, num_steps + 1):
         if target in ["unet", "both"]:
-            degrade_all_tensors(pipe.unet, ratio=ratio, max_percent=max_percent)
+            modelbend(pipe.unet, ratio=ratio, max_percent=max_percent,
+                      dist=dist, generator=bend_gen)
         if target in ["text_encoder", "both"]:
-            degrade_all_tensors(pipe.text_encoder, ratio=ratio, max_percent=max_percent)
+            modelbend(pipe.text_encoder, ratio=ratio, max_percent=max_percent,
+                      dist=dist, generator=bend_gen)
 
         drift_text = ""
         if show_drift:
             drift_text = get_semantic_drift(pipe, anchors, valid_tokens, prompt_ids)
 
-        generator = torch.Generator(pipe.device).manual_seed(42)
+        generator = torch.Generator(pipe.device).manual_seed(seed)
         image = pipe(prompt, height=height, width=width, num_inference_steps=inference_steps, generator=generator).images[0]
 
         if upscale: image = upscale_image(image)
@@ -238,17 +227,27 @@ if __name__ == "__main__":
     parser.add_argument("--inference_steps", type=int, default=25)
     parser.add_argument("--show_drift", action="store_true", default=None, help="Force display of semantic drift overlay")
     parser.add_argument("--no_drift", action="store_false", dest="show_drift", help="Force disable semantic drift overlay")
-    
+    parser.add_argument("--dist", type=str, default="uniform", choices=list(DISTRIBUTIONS),
+                        help="Shape of the weight perturbation. Variance-matched: uniform "
+                             "spreads an even drift bounded at +/-delta, gaussian is mostly "
+                             "smaller shifts with an unbounded tail.")
+    parser.add_argument("--seed", type=int, default=42, help="Seed for the diffusion latent")
+    parser.add_argument("--bend_seed", type=int, default=None,
+                        help="Seed for the bend RNG. Omit for an unseeded (non-reproducible) run.")
+
     args = parser.parse_args()
-    
+
     run_disintegration(
-        target=args.target, 
-        num_steps=args.steps, 
-        ratio=args.ratio, 
-        max_percent=args.percent, 
+        target=args.target,
+        num_steps=args.steps,
+        ratio=args.ratio,
+        max_percent=args.percent,
         prompt=args.prompt,
         height=args.height,
         width=args.width,
         inference_steps=args.inference_steps,
-        show_drift=args.show_drift
+        show_drift=args.show_drift,
+        dist=args.dist,
+        seed=args.seed,
+        bend_seed=args.bend_seed
     )

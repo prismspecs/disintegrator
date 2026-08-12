@@ -5,30 +5,7 @@ import shutil
 from PIL import Image, ImageDraw, ImageFont
 import textwrap
 
-def degrade_all_tensors(module, ratio, max_percent):
-    device = next(module.parameters()).device
-    if device.type == 'meta': return
-
-    for name, param in module.named_parameters():
-        with torch.no_grad():
-            p_min, p_max = param.data.min(), param.data.max()
-            p_range = p_max - p_min
-            if p_range <= 1e-12: continue
-            mask = (torch.rand(param.shape, device=param.device) < ratio)
-            delta = max_percent * p_range
-            shifts = torch.empty(param.shape, device=param.device).uniform_(-delta, delta)
-            param.data[mask] += shifts[mask]
-
-    for name, buf in module.named_buffers():
-        if not torch.is_floating_point(buf): continue
-        with torch.no_grad():
-            b_min, b_max = buf.min(), buf.max()
-            b_range = b_max - b_min
-            if b_range <= 1e-12: continue
-            mask = (torch.rand(buf.shape, device=buf.device) < ratio)
-            delta = max_percent * b_range
-            shifts = torch.empty(buf.shape, device=buf.device).uniform_(-delta, delta)
-            buf[mask] += shifts[mask]
+from bending import modelbend
 
 def upscale_image(image, scale=2):
     w, h = image.size
@@ -68,6 +45,7 @@ def run_batch_disintegration(configs,
                              num_steps=500, 
                              ratio=0.002,  # Slower decay: 0.2% instead of 1%
                              max_percent=0.02, # Slower decay: 2% instead of 5%
+                             dist="uniform",
                              height=512, 
                              width=512,
                              upscale=True, 
@@ -127,7 +105,7 @@ def run_batch_disintegration(configs,
             if i % 10 == 0:
                 print(f"Disintegration Step {i}/{num_steps}...")
             
-            degrade_all_tensors(pipe.unet, ratio=ratio, max_percent=max_percent)
+            modelbend(pipe.unet, ratio=ratio, max_percent=max_percent, dist=dist)
             
             if torch.cuda.is_available(): torch.cuda.empty_cache()
                 

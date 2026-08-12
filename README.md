@@ -54,8 +54,11 @@ python3 disintegrate_sd.py --target both --steps 50
 **Key Arguments:**
 - `--target`: Choose `unet`, `text_encoder`, or `both`.
 - `--steps`: Number of images to generate in the sequence.
-- `--ratio`: The percentage of weights to corrupt at each step (e.g., `0.01` for 1%).
-- `--percent`: The magnitude of the corruption (how far a weight can shift).
+- `--ratio`: The percentage of weights to corrupt at each step (e.g., `0.01` for 1%). Note that passes compound: after `N` steps the fraction touched at least once is `1 - (1 - ratio)**N`, so `--ratio 0.01 --steps 20` reaches 18%, not 1%.
+- `--percent`: The magnitude of the corruption (how far a weight can shift), as a fraction of each tensor's own range.
+- `--dist`: Shape of the perturbation, `uniform` (default) or `gaussian`.
+- `--seed`: Seed for the diffusion latent (default `42`), held fixed across steps.
+- `--bend_seed`: Seed for the bend RNG. Omit for an unseeded, non-reproducible run.
 - `--prompt`: The starting concept to be disintegrated.
 
 ### Smooth Disintegration Video (`smooth_disintegrate.py`)
@@ -122,6 +125,17 @@ python3 measure_disintegration.py --height 768 --width 768 --save_visuals
 - **Output Relative Distance:** The ratio of the norm of the difference between original and degraded noise predictions to the norm of the original prediction. This represents the "behavioral" divergence.
 
 Results are saved as a JSON file for further analysis, including "milestones" that identify at which step the model reaches specific levels of distortion (e.g., "Structural failure" at 50% divergence).
+
+### Perturbation shape (`--dist`)
+
+Both distributions carry the same variance (`delta**2 / 3`), so `--dist` changes the *shape* of the damage rather than its overall magnitude:
+
+- **`uniform`** — an even drift with a hard bound. A shift of `0.9 * delta` is exactly as likely as `0.1 * delta`, and nothing ever exceeds `delta`. Broad, gentle, global.
+- **`gaussian`** — mostly smaller shifts with an unbounded tail. For the same variance it concentrates its damage: most weights barely move, a few move far past what `uniform` permits (~3.4x `delta` at U-Net scale).
+
+The working hypothesis is that this controls *what kind* of failure appears, not just how much: uniform drift dissolves images into smooth color fields, while heavy tails should blow out individual neurons and produce localized, structured artifacts. Untested — run both at matched `--ratio`, `--percent`, `--seed` and `--bend_seed` to compare.
+
+To isolate the effect of bending from the effect of a different starting latent, hold `--seed` fixed and vary `--bend_seed`.
 
 ---
 
